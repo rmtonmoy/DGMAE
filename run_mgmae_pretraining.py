@@ -26,7 +26,7 @@ import models  # noqa: F401
 import utils
 from dataset import build_mgmae_dataset
 from engine_for_mgmae import train_one_epoch
-from flow_utils.raft.core.raft import RAFT
+#from flow_utils.raft.core.raft import RAFT
 from optim_factory import create_optimizer
 from utils import NativeScalerWithGradNormCount as NativeScaler
 from utils import multiple_pretrain_samples_collate
@@ -390,7 +390,8 @@ def main(args):
 
     # get flow model
     if args.get_flow == 'raft':
-        flow_args = argparse.Namespace(
+        flow_model = None
+        """flow_args = argparse.Namespace(
             model=args.flow_model,
             small=('small' in args.flow_model),
             mixed_precision=True,
@@ -399,7 +400,7 @@ def main(args):
         flow_model = RAFT(flow_args)
         flow_model.load_state_dict(torch.load(flow_args.model))
         flow_model.to(device)
-        flow_model.eval()
+        flow_model.eval()"""
     else:
         raise NotImplementedError
 

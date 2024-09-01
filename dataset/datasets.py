@@ -105,6 +105,8 @@ class VideoClsDataset(Dataset):
 
             sample = self.dataset_samples[index]
             # T H W C
+            print(f"shape of sample : sample.shape")
+
             buffer = self.load_video(sample, sample_rate_scale=scale_t)
             if len(buffer) == 0:
                 while len(buffer) == 0:

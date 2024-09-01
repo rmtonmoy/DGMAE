@@ -16,7 +16,10 @@ from einops import rearrange
 from timm.data.constants import IMAGENET_DEFAULT_MEAN, IMAGENET_DEFAULT_STD
 
 import utils
-from flow_utils.softsplat import BackWarp, Softsplat
+#from flow_utils.softsplat import BackWarp, Softsplat
+import diffusers
+import torch
+from PIL import Image  # For saving images
 
 
 def train_one_epoch(model: torch.nn.Module,
@@ -80,8 +83,9 @@ def train_one_epoch(model: torch.nn.Module,
                                                                    None, None,
                                                                    None]
             unnorm_images = images * std + mean  # in [0, 1]
-            nimgs = 2 * unnorm_images - 1.0  # in [-1, 1]
-            mask_volume = build_mask_volume(nimgs, init_mask_map)
+            #nimgs = 2 * unnorm_images - 1.0  # in [-1, 1]
+            nimgs = unnorm_images
+            mask_volume = build_mask_volume(nimgs, images, init_mask_map)
             if args.decoder_mask_type == 'none':
                 decode_masked_pos = ~mask_volume
 
@@ -189,27 +193,35 @@ def train_one_epoch(model: torch.nn.Module,
 
 
 def get_build_mask_volume_func(flow_model, device, args):
-    if args.warp_type == 'backward':
-        # The method of warping flow on the mask map.
-        warpFlow = partial(BackWarp, device=device)
-    if args.warp_type == 'forward':
-        B = args.batch_size * args.num_sample
-        H = W = args.input_size
-        z = torch.oes(B, 1, H, W).to(device, non_blocking=True)
-        warpFlow = Softsplat(z=z)
-
-    def _build_mask_volume(nimgs, init_mask_map):
-        B, C, T, H, W = nimgs.shape
-        base_idx = {
-            'middle': T // 2,
-            'first': 0,
-            'random': random.randint(0, T - 1)
-        }.get(args.base_frame, T // 2)
-
+    def _build_mask_volume(nimgs, images, init_mask_map):
         mask_map_list = [init_mask_map]
 
+        B, C, T, H, W = nimgs.shape
+        nimgs_transposed = nimgs.permute(2, 0, 1, 3, 4)
+        nimgs = nimgs_transposed
+        images = nimgs
+        
+        pipe = diffusers.MarigoldDepthPipeline.from_pretrained("prs-eth/marigold-depth-lcm-v1-0", variant="fp16", prediction_type = "depth", torch_dtype=torch.float16).to("cuda")
+        for t in range(nimgs_transposed.size(0)):
+            print(f"Shape of nimgs[t]: {nimgs[t].shape}") # 64 x 3 x H x W
+
+            for i in range(images[t].shape[0]):
+                image_np = images[t][i].cpu().permute(1,2,0).numpy()
+                image_np = (255 * (image_np - image_np.min()) / (image_np.max() - image_np.min())).astype('uint8')
+                raw_image = Image.fromarray(image_np)
+                raw_image.save(f"output/raw_frames/frame{i}.png")
+
+            depth = pipe(nimgs[t])
+            vis = pipe.image_processor.export_depth_to_16bit_png(depth.prediction)
+
+            for i in range(0, len(vis)):
+                vis[i].save(f"output/depth_maps/frame{i}.png")
+            sys.exit(0)
+
+
+
         mask_map = init_mask_map
-        for r_idx in reversed(range(base_idx)):
+        for t_idx in range(0, T):
             # determine the order of frames to do flow warpping.
             l_idx = r_idx + 1
             if args.warp_type == 'backwarp':
