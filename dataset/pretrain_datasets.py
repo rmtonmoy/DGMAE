@@ -255,6 +255,7 @@ class HybridVideoMAE(torch.utils.data.Dataset):
             self.skip_length = self.orig_skip_length
 
             if total_frame < 0:
+                print("Rez: Loading one item? - the # of prints will say")
                 decord_vr = self.video_loader(video_name)
                 duration = len(decord_vr)
 
@@ -536,6 +537,8 @@ class VideoMAE(torch.utils.data.Dataset):
                 process_data_list.append(process_data)
                 encoder_mask_list.append(encoder_mask)
                 decoder_mask_list.append(decoder_mask)
+            
+            # Rez : "The following line returns the encoder and decoder mask lists."
             return process_data_list, encoder_mask_list, decoder_mask_list
         else:
             process_data, encoder_mask, decoder_mask = self.transform(

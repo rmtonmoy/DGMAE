@@ -130,15 +130,19 @@ class MixGaussianInitialMaskingGenerator:
         assert method in ['max', 'sum']
 
         _, self.height, self.width = input_size
+        print(f"DIMS: hxw = {self.height} * {self.width} ")
+        print(f"patch_size: {patch_size}")
+
+
         assert self.height == self.width
         self.patch_size = patch_size
         self.method = method
         self.img_h = self.height * patch_size
         self.img_w = self.width * patch_size
 
-        self.num_patches = self.height * self.width  # 14x14
-        self.num_mask = int(mask_ratio * self.num_patches)
-        self.num_vis = self.num_patches - self.num_mask
+        self.num_patches = self.height * self.width  # 14x14 = 196
+        self.num_mask = int(mask_ratio * self.num_patches)  # Rez: should be around 176
+        self.num_vis = self.num_patches - self.num_mask     # Rez: should be around 20
 
         _x = torch.linspace(0, self.img_h - 1, self.img_h)
         _y = torch.linspace(0, self.img_w - 1, self.img_w)
@@ -219,7 +223,8 @@ class TokenRandomInitialMaskingGenerator:
         ])
         np.random.shuffle(mask)
         mask = torch.as_tensor(mask).unsqueeze(-1).repeat(
-            1, self.patch_size * self.patch_size)
+            1, self.patch_size * self.patch_size)           # Rez: gets to size (14*14, 16*16)
+                                                            # (h w) * (p p) [basically (p0, p1) here]
         mask = rearrange(
             mask,
             '(h w) (p0 p1) -> (h p0) (w p1)',

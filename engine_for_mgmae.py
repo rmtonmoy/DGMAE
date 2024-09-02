@@ -203,7 +203,6 @@ def get_build_mask_volume_func(flow_model, device, args):
         
         pipe = diffusers.MarigoldDepthPipeline.from_pretrained("prs-eth/marigold-depth-lcm-v1-0", variant="fp16", prediction_type = "depth", torch_dtype=torch.float16).to("cuda")
         for t in range(nimgs_transposed.size(0)):
-            print(f"Shape of nimgs[t]: {nimgs[t].shape}") # 64 x 3 x H x W
 
             for i in range(images[t].shape[0]):
                 image_np = images[t][i].cpu().permute(1,2,0).numpy()
@@ -212,6 +211,9 @@ def get_build_mask_volume_func(flow_model, device, args):
                 raw_image.save(f"output/raw_frames/frame{i}.png")
 
             depth = pipe(nimgs[t])
+            print(f"Shape of nimgs[t]: {nimgs[t].shape}") # 64 x 3 x H x W
+            print(f"Shape of depth : {depth.shape}")
+
             vis = pipe.image_processor.export_depth_to_16bit_png(depth.prediction)
 
             for i in range(0, len(vis)):
