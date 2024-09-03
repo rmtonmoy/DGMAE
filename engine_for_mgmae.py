@@ -207,7 +207,7 @@ def get_mask_map_on_depth(depth_info, height, width, patch_size):
         p1 = patch_size).to(torch.float32)
     
     depth_info = depth_info.mean(dim = 2)                   # b (14 * 14, 16 * 16) -> b (14 * 14) = b (196)
-    k = int(depth_info.size(1) * 0.5)                       # THRESHOLD
+    k = int(depth_info.size(1) * 0.8)                       # THRESHOLD
     sorted_depth, _ = depth_info.sort(dim = 1, descending = True)
     threshold_val = sorted_depth[:, k - 1].unsqueeze(1).repeat(1, height * width)         # shape = b (14 * 14)
 
@@ -265,14 +265,13 @@ def get_build_mask_volume_func(flow_model, device, args):
                 mask_np = curr_mask[i].unsqueeze(-1).repeat(1,1,3)
                 print(f"Shape of mask_np: {mask_np.shape}")
 
-                #image_np = image_np * mask_np.numpy()               #do the masking
+                image_np = image_np * mask_np.numpy()               #do the masking
  
                 image_np = (255 * (image_np - image_np.min()) / (image_np.max() - image_np.min())).astype('uint8')
 
                 raw_image = Image.fromarray(image_np)
-                raw_image.save(f"output/raw_frames/frame{i}.png")      
+                raw_image.save(f"output/raw_frames/frame{i}_80.png")      
 
-                sys.exit(0)      
 
             for i in range(0, len(vis)):
                 vis[i].save(f"output/depth_maps/frame{i}.png")
