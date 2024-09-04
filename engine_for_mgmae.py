@@ -206,13 +206,16 @@ def get_mask_map_on_depth(depth_info, height, width, patch_size):
         p0 = patch_size,
         p1 = patch_size).to(torch.float32)
     
+    low_bar = 0.6
+    high_bar = 0.8
     depth_info = depth_info.mean(dim = 2)                   # b (14 * 14, 16 * 16) -> b (14 * 14) = b (196)
-    k = int(depth_info.size(1) * 0.8)                       # THRESHOLD
+    hi = int(depth_info.size(1) * high_bar)                       # THRESHOLD
+    lo =  int(depth_info.size(1) * low_bar)
     sorted_depth, _ = depth_info.sort(dim = 1, descending = True)
-    threshold_val = sorted_depth[:, k - 1].unsqueeze(1).repeat(1, height * width)         # shape = b (14 * 14)
+    threshold_mx_val = sorted_depth[:, hi - 1].unsqueeze(1).repeat(1, height * width)         # shape = b (14 * 14)
+    threshold_mn_val = sorted_depth[:, lo - 1].unsqueeze(1).repeat(1, height * width)
 
-
-    mask = (depth_info >= threshold_val)
+    mask = (threshold_mn_val <= depth_info) & (depth_info >= threshold_mx_val)
     ret = torch.where(mask, torch.tensor(0.0), torch.tensor(1.0))           # b (14 * 14)
     ret = ret.unsqueeze(-1).repeat(1, 1, patch_size * patch_size)           # b (14 * 14) , (16 * 16)
 
@@ -270,11 +273,11 @@ def get_build_mask_volume_func(flow_model, device, args):
                 image_np = (255 * (image_np - image_np.min()) / (image_np.max() - image_np.min())).astype('uint8')
 
                 raw_image = Image.fromarray(image_np)
-                raw_image.save(f"output/raw_frames/frame{i}_80.png")      
+                raw_image.save(f"output/raw_frames/frame{i}_60_80.png")      
 
 
             for i in range(0, len(vis)):
-                vis[i].save(f"output/depth_maps/frame{i}.png")
+                vis[i].save(f"output/depth_maps/frame{i}_00depth.png")
             sys.exit(0)
 
 
